@@ -1,0 +1,138 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  OWNER
+  SELLER
+}
+
+enum SaleStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(SELLER)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sales     Sale[]
+
+  @@map("users")
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+
+  @@map("categories")
+}
+
+model Provider {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+
+  @@map("providers")
+}
+
+model Product {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal    @db.Decimal(10, 2)
+  stock       Int        @default(0)
+  minStock    Int        @default(5)
+  sku         String?    @unique
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  categoryId  String?
+  provider    Provider?  @relation(fields: [providerId], references: [id])
+  providerId  String?
+  saleItems   SaleItem[]
+
+  @@map("products")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  phone     String?
+  address   String?
+  ruc       String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sales     Sale[]
+
+  @@map("customers")
+}
+
+model Sale {
+  id         String     @id @default(cuid())
+  number     String     @unique
+  status     SaleStatus @default(COMPLETED)
+  subtotal   Decimal    @db.Decimal(10, 2)
+  tax        Decimal    @db.Decimal(10, 2)
+  total      Decimal    @db.Decimal(10, 2)
+  notes      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  customer   Customer?  @relation(fields: [customerId], references: [id])
+  customerId String?
+  seller     User       @relation(fields: [sellerId], references: [id])
+  sellerId   String
+  items      SaleItem[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  subtotal  Decimal @db.Decimal(10, 2)
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleId    String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+
+  @@map("sale_items")
+}
+
+model BusinessConfig {
+  id        String   @id @default(cuid())
+  name      String
+  ruc       String?
+  phone     String?
+  address   String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("business_config")
+}
