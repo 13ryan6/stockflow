@@ -34,7 +34,11 @@ export default async function UsersPage() {
         </Link>
       </div>
 
-      <UsersTable users={users} currentUserId={(session?.user as any)?.id} />
+      <UsersTable
+        users={users}
+        currentUserId={(session?.user as any)?.id}
+        currentRole={role}
+      />
     </div>
   );
 }

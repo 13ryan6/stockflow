@@ -27,9 +27,10 @@ const roleColors: Record<string, string> = {
   SELLER: "bg-gray-100 text-gray-700 border-gray-200",
 };
 
-export function UsersTable({ users, currentUserId }: {
+export function UsersTable({ users, currentUserId, currentRole }: {
   users: User[];
   currentUserId: string;
+  currentRole: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -44,6 +45,21 @@ export function UsersTable({ users, currentUserId }: {
     });
     router.refresh();
     setLoading(null);
+  }
+
+  function canModify(user: User): boolean {
+    // No puede modificarse a sí mismo
+    if (user.id === currentUserId) return false;
+    // Owner no puede tocar a Admin ni a otros Owners
+    if (currentRole === "OWNER" && (user.role === "ADMIN" || user.role === "OWNER")) return false;
+    return true;
+  }
+
+  function getBlockedReason(user: User): string | null {
+    if (user.id === currentUserId) return "Tu cuenta";
+    if (currentRole === "OWNER" && user.role === "ADMIN") return "Solo el Admin puede modificarse";
+    if (currentRole === "OWNER" && user.role === "OWNER") return "No puedes modificar otro propietario";
+    return null;
   }
 
   return (
@@ -82,7 +98,7 @@ export function UsersTable({ users, currentUserId }: {
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
-                  {user.id !== currentUserId && (
+                  {canModify(user) ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -98,9 +114,8 @@ export function UsersTable({ users, currentUserId }: {
                         : <><UserCheck className="w-4 h-4 mr-1" />Activar</>
                       }
                     </Button>
-                  )}
-                  {user.id === currentUserId && (
-                    <span className="text-xs text-gray-400">Tu cuenta</span>
+                  ) : (
+                    <span className="text-xs text-gray-400">{getBlockedReason(user)}</span>
                   )}
                 </td>
               </tr>
