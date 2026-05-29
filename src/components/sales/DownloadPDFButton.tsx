@@ -5,10 +5,10 @@ import { SalePDF } from "./SalePDF";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2 } from "lucide-react";
 
-export function DownloadPDFButton({ sale }: { sale: any }) {
+export function DownloadPDFButton({ sale, business }: { sale: any; business: any }) {
   return (
     <PDFDownloadLink
-      document={<SalePDF sale={sale} />}
+      document={<SalePDF sale={sale} business={business} />}
       fileName={`${sale.number}.pdf`}
     >
       {({ loading }) => (

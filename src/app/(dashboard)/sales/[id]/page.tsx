@@ -8,16 +8,19 @@ import { ArrowLeft } from "lucide-react";
 import { DownloadPDFButton } from "@/components/sales/DownloadPDFButton";
 
 export default async function SaleDetailPage({ params }: { params: { id: string } }) {
-  const sale = await db.sale.findUnique({
-    where: { id: params.id },
-    include: {
-      customer: true,
-      seller: true,
-      items: {
-        include: { product: true },
+  const [sale, business] = await Promise.all([
+    db.sale.findUnique({
+      where: { id: params.id },
+      include: {
+        customer: true,
+        seller: true,
+        items: {
+          include: { product: true },
+        },
       },
-    },
-  });
+    }),
+    db.businessConfig.findFirst(),
+  ]);
 
   if (!sale) notFound();
 
@@ -39,7 +42,7 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
           </div>
         </div>
         <div className="flex gap-2">
-          <DownloadPDFButton sale={sale} />
+          <DownloadPDFButton sale={sale} business={business} />
         </div>
       </div>
 

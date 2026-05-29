@@ -17,14 +17,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 30,
+    paddingBottom: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: "#2563eb",
   },
   company: {
-    fontSize: 20,
+    fontSize: 22,
     fontFamily: "Helvetica-Bold",
     color: "#2563eb",
   },
-  subtitle: {
-    fontSize: 10,
+  companyInfo: {
+    fontSize: 9,
     color: "#6b7280",
     marginTop: 2,
   },
@@ -32,39 +35,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Helvetica-Bold",
     color: "#1f2937",
+    textAlign: "right",
   },
   invoiceNumber: {
     fontSize: 12,
     color: "#2563eb",
     marginTop: 2,
+    textAlign: "right",
   },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
+  invoiceDate: {
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
     color: "#6b7280",
-    textTransform: "uppercase",
-    marginBottom: 6,
-    letterSpacing: 1,
+    marginTop: 4,
+    textAlign: "right",
   },
   infoRow: {
     flexDirection: "row",
-    gap: 20,
-    marginBottom: 16,
+    gap: 16,
+    marginBottom: 20,
   },
   infoBox: {
     flex: 1,
     backgroundColor: "#f9fafb",
     padding: 12,
     borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: "#2563eb",
   },
   infoLabel: {
     fontSize: 8,
     color: "#9ca3af",
-    marginBottom: 3,
+    marginBottom: 4,
     textTransform: "uppercase",
+    fontFamily: "Helvetica-Bold",
   },
   infoValue: {
     fontSize: 11,
@@ -75,9 +78,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#6b7280",
     marginTop: 2,
-  },
-  table: {
-    marginBottom: 20,
   },
   tableHeader: {
     flexDirection: "row",
@@ -111,7 +111,8 @@ const styles = StyleSheet.create({
   col4: { flex: 1, textAlign: "right" },
   totals: {
     alignItems: "flex-end",
-    marginTop: 8,
+    marginTop: 12,
+    marginBottom: 20,
   },
   totalRow: {
     flexDirection: "row",
@@ -154,11 +155,28 @@ const styles = StyleSheet.create({
     width: 70,
     textAlign: "right",
   },
+  thanksBox: {
+    backgroundColor: "#eff6ff",
+    borderRadius: 6,
+    padding: 12,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  thanksText: {
+    fontSize: 12,
+    fontFamily: "Helvetica-Bold",
+    color: "#2563eb",
+  },
+  thanksSub: {
+    fontSize: 9,
+    color: "#6b7280",
+    marginTop: 4,
+  },
   footer: {
-    marginTop: 40,
+    marginTop: 20,
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
-    paddingTop: 16,
+    paddingTop: 12,
     flexDirection: "row",
     justifyContent: "space-between",
   },
@@ -167,6 +185,14 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
   },
 });
+
+type BusinessConfig = {
+  name: string;
+  ruc: string | null;
+  phone: string | null;
+  address: string | null;
+  email: string | null;
+} | null;
 
 type SalePDFProps = {
   sale: {
@@ -181,6 +207,7 @@ type SalePDFProps = {
       email: string | null;
       phone: string | null;
       ruc: string | null;
+      address: string | null;
     } | null;
     seller: { name: string };
     items: {
@@ -191,32 +218,43 @@ type SalePDFProps = {
       product: { name: string };
     }[];
   };
+  business: BusinessConfig;
 };
 
-export function SalePDF({ sale }: SalePDFProps) {
+export function SalePDF({ sale, business }: SalePDFProps) {
   const date = new Date(sale.createdAt).toLocaleDateString("es-EC", {
     day: "2-digit",
     month: "long",
     year: "numeric",
   });
 
+  const time = new Date(sale.createdAt).toLocaleTimeString("es-EC", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.company}>StockFlow</Text>
-            <Text style={styles.subtitle}>Sistema de inventario y ventas</Text>
+            <Text style={styles.company}>{business?.name ?? "StockFlow"}</Text>
+            {business?.ruc && <Text style={styles.companyInfo}>RUC: {business.ruc}</Text>}
+            {business?.phone && <Text style={styles.companyInfo}>Tel: {business.phone}</Text>}
+            {business?.address && <Text style={styles.companyInfo}>{business.address}</Text>}
+            {business?.email && <Text style={styles.companyInfo}>{business.email}</Text>}
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text style={styles.invoiceTitle}>FACTURA</Text>
             <Text style={styles.invoiceNumber}>{sale.number}</Text>
-            <Text style={[styles.subtitle, { marginTop: 4 }]}>{date}</Text>
+            <Text style={styles.invoiceDate}>{date}</Text>
+            <Text style={styles.invoiceDate}>{time}</Text>
           </View>
         </View>
 
-        {/* Info */}
+        {/* Cliente y Vendedor */}
         <View style={styles.infoRow}>
           <View style={styles.infoBox}>
             <Text style={styles.infoLabel}>Cliente</Text>
@@ -224,20 +262,24 @@ export function SalePDF({ sale }: SalePDFProps) {
               {sale.customer?.name ?? "Consumidor final"}
             </Text>
             {sale.customer?.ruc && (
-              <Text style={styles.infoSub}>RUC: {sale.customer.ruc}</Text>
+              <Text style={styles.infoSub}>RUC / CI: {sale.customer.ruc}</Text>
             )}
             {sale.customer?.phone && (
-              <Text style={styles.infoSub}>{sale.customer.phone}</Text>
+              <Text style={styles.infoSub}>Tel: {sale.customer.phone}</Text>
+            )}
+            {sale.customer?.address && (
+              <Text style={styles.infoSub}>{sale.customer.address}</Text>
             )}
           </View>
           <View style={styles.infoBox}>
             <Text style={styles.infoLabel}>Vendedor</Text>
             <Text style={styles.infoValue}>{sale.seller.name}</Text>
+            <Text style={styles.infoSub}>Método de pago: Efectivo</Text>
           </View>
         </View>
 
         {/* Tabla productos */}
-        <View style={styles.table}>
+        <View>
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderText, styles.col1]}>Producto</Text>
             <Text style={[styles.tableHeaderText, styles.col2]}>Precio</Text>
@@ -272,17 +314,24 @@ export function SalePDF({ sale }: SalePDFProps) {
 
         {/* Notas */}
         {sale.notes && (
-          <View style={{ marginTop: 20 }}>
-            <Text style={styles.sectionTitle}>Notas</Text>
-            <Text style={{ fontSize: 10, color: "#6b7280" }}>{sale.notes}</Text>
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ fontSize: 9, color: "#6b7280", fontFamily: "Helvetica-Bold" }}>NOTAS</Text>
+            <Text style={{ fontSize: 10, color: "#6b7280", marginTop: 4 }}>{sale.notes}</Text>
           </View>
         )}
 
+        {/* Gracias */}
+        <View style={styles.thanksBox}>
+          <Text style={styles.thanksText}>¡Gracias por su compra!</Text>
+          <Text style={styles.thanksSub}>Vuelva pronto — {business?.name ?? "StockFlow"}</Text>
+        </View>
+
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>StockFlow — Sistema de inventario y ventas</Text>
+          <Text style={styles.footerText}>{business?.name ?? "StockFlow"} — {business?.address ?? ""}</Text>
           <Text style={styles.footerText}>{sale.number} • {date}</Text>
         </View>
+
       </Page>
     </Document>
   );
