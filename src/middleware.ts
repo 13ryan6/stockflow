@@ -6,6 +6,13 @@ export default withAuth(
     const token = req.nextauth.token;
     const pathname = req.nextUrl.pathname;
 
+    // APIs sin token devuelven 401
+    if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth")) {
+      if (!token) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+      }
+    }
+
     const ownerRoutes = ["/reports", "/inventory", "/providers", "/settings/users"];
     const adminRoutes = ["/settings"];
 
@@ -25,7 +32,10 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        if (req.nextUrl.pathname.startsWith("/api/")) return true;
+        return !!token;
+      },
     },
   }
 );
