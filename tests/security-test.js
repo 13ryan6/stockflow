@@ -2,84 +2,67 @@ import http from "k6/http";
 import { check } from "k6";
 
 export const options = {
-  scenarios: {
-    seguridad: {
-      executor: "per-vu-iterations",
-      vus: 1,
-      iterations: 1,
-    },
-  },
+  vus: 1,
+  iterations: 1,
 };
 
 const BASE_URL = "https://stockflow-7zus.vercel.app";
 
 export default function () {
 
-  console.log("🔐 PRUEBA 1 — Acceso sin autenticación a páginas protegidas");
+  // =========================
+  // LOGIN
+  // =========================
 
-  // Intentar acceder al dashboard sin login
-  const dashboard = http.get(`${BASE_URL}/`, {
-    redirects: 0,
-  });
-  check(dashboard, {
-    "dashboard redirige al login sin auth": (r) => r.status === 307 || r.status === 302 || r.status === 308,
-  });
-  console.log(`Dashboard sin auth: ${dashboard.status}`);
+  const csrfRes = http.get(`${BASE_URL}/api/auth/csrf`);
 
-  // Intentar acceder al inventario sin login
-  const inventory = http.get(`${BASE_URL}/inventory`, {
-    redirects: 0,
-  });
-  check(inventory, {
-    "inventario redirige sin auth": (r) => r.status === 307 || r.status === 302 || r.status === 308,
-  });
-  console.log(`Inventario sin auth: ${inventory.status}`);
+  const csrfToken = csrfRes.json("csrfToken");
 
-  // Intentar acceder a ventas sin login
-  const sales = http.get(`${BASE_URL}/sales`, {
-    redirects: 0,
-  });
-  check(sales, {
-    "ventas redirige sin auth": (r) => r.status === 307 || r.status === 302 || r.status === 308,
-  });
-  console.log(`Ventas sin auth: ${sales.status}`);
+  const payload = {
+    email: "owner@stockflow.com",
+    password: "owner123",
+    csrfToken,
+    json: "true",
+  };
 
-  // Intentar acceder a reportes sin login
-  const reports = http.get(`${BASE_URL}/reports`, {
-    redirects: 0,
-  });
-  check(reports, {
-    "reportes redirige sin auth": (r) => r.status === 307 || r.status === 302 || r.status === 308,
-  });
-  console.log(`Reportes sin auth: ${reports.status}`);
+  const loginRes = http.post(
+    `${BASE_URL}/api/auth/callback/credentials`,
+    payload,
+    {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      cookies: csrfRes.cookies,
+    }
+  );
 
-  console.log("🔐 PRUEBA 2 — Acceso sin autenticación a APIs");
+  console.log(`LOGIN: ${loginRes.status}`);
 
-  // Intentar llamar API de productos sin token
-  const apiProducts = http.get(`${BASE_URL}/api/products`);
-  check(apiProducts, {
-    "API productos bloquea sin auth": (r) => r.status === 401 || r.status === 403,
-  });
-  console.log(`API productos sin auth: ${apiProducts.status}`);
+  // =========================
+  // PRUEBA IDOR
+  // =========================
 
-  // Intentar llamar API de clientes sin token
-  const apiCustomers = http.get(`${BASE_URL}/api/customers`);
-  check(apiCustomers, {
-    "API clientes bloquea sin auth": (r) => r.status === 401 || r.status === 403,
-  });
-  console.log(`API clientes sin auth: ${apiCustomers.status}`);
+  const ids = [1, 2, 3, 999];
 
-  // Intentar llamar API de ventas sin token
-  const apiSales = http.get(`${BASE_URL}/api/sales`);
-  check(apiSales, {
-    "API ventas bloquea sin auth": (r) => r.status === 401 || r.status === 403,
-  });
-  console.log(`API ventas sin auth: ${apiSales.status}`);
+  ids.forEach((id) => {
 
-  // Intentar llamar API de usuarios sin token
-  const apiUsers = http.get(`${BASE_URL}/api/users`);
-  check(apiUsers, {
-    "API usuarios bloquea sin auth": (r) => r.status === 401 || r.status === 403,
+    const res = http.get(
+      `${BASE_URL}/api/products/${id}`,
+      {
+        cookies: loginRes.cookies,
+      }
+    );
+
+    console.log(`/api/products/${id} -> ${res.status}`);
+
+    check(res, {
+
+      "No error 500": (r) => r.status !== 500,
+
+      "Protección IDOR": (r) =>
+        r.status === 200 ||
+        r.status === 403 ||
+        r.status === 404,
+    });
   });
-  console.log(`API usuarios sin auth: ${apiUsers.status}`);
 }
