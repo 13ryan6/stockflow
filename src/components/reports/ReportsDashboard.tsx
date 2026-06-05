@@ -1,7 +1,7 @@
 "use client";
-
-import { AlertTriangle, TrendingUp, ShoppingCart, Users, Package, DollarSign, FileText } from "lucide-react";
+import { AlertTriangle, TrendingUp, ShoppingCart, Users, Package, DollarSign, FileText, Boxes } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ExportButtons } from "@/components/reports/ExportButtons";
 
 type Props = {
   stats: {
@@ -19,14 +19,40 @@ type Props = {
   topProducts: { productId: string; name: string; quantity: number }[];
   topCustomers: { customerId: string | null; name: string; total: number; count: number }[];
   lowStockProducts: { id: string; name: string; stock: number; minStock: number }[];
+  inventoryValue: number;
+  inventoryByCategory: { name: string; value: number }[];
+  topValueProducts: { name: string; value: number; stock: number }[];
+  outOfStockProducts: { id: string; name: string }[];
 };
 
-export function ReportsDashboard({ stats, topProducts, topCustomers, lowStockProducts }: Props) {
+export function ReportsDashboard({
+  stats,
+  topProducts,
+  topCustomers,
+  lowStockProducts,
+  inventoryValue,
+  inventoryByCategory,
+  topValueProducts,
+  outOfStockProducts,
+}: Props) {
+  const safeInventoryValue = inventoryValue ?? 0;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
-        <p className="text-gray-500 text-sm mt-1">Resumen general del negocio</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
+          <p className="text-gray-500 text-sm mt-1">Resumen general del negocio</p>
+        </div>
+        <ExportButtons
+          stats={stats}
+          topProducts={topProducts}
+          topCustomers={topCustomers}
+          inventoryValue={safeInventoryValue}
+          inventoryByCategory={inventoryByCategory ?? []}
+          topValueProducts={topValueProducts ?? []}
+          outOfStockProducts={outOfStockProducts ?? []}
+        />
       </div>
 
       {/* Stats de ventas */}
@@ -79,6 +105,89 @@ export function ReportsDashboard({ stats, topProducts, topCustomers, lowStockPro
         <div className="mt-4 bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
           ⚠️ <strong>Nota:</strong> El IVA se declara mensualmente. El Impuesto a la Renta es anual bajo régimen RIMPE Emprendedor (2% sobre ingresos brutos). Consulta con tu contador para casos específicos.
         </div>
+      </div>
+
+      {/* Sección Inventario */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Boxes className="w-5 h-5 text-teal-600" />
+          <h2 className="font-semibold text-gray-900">Inventario</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Valor total */}
+          <div className="bg-teal-50 rounded-xl p-4 border border-teal-100">
+            <p className="text-xs text-teal-700 uppercase mb-1">Valor total del inventario</p>
+            <p className="text-3xl font-bold text-teal-700">
+              ${safeInventoryValue.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-xs text-teal-600 mt-1">Capital inmovilizado en productos activos</p>
+          </div>
+
+          {/* Top 3 mayor valor */}
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500 uppercase font-medium">Mayor valor inmovilizado</p>
+            {(topValueProducts ?? []).length === 0 ? (
+              <p className="text-gray-400 text-sm">Sin datos</p>
+            ) : (
+              (topValueProducts ?? []).map((p, i) => (
+                <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-teal-100 text-teal-700 text-xs font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{p.name}</p>
+                      <p className="text-xs text-gray-400">{p.stock} unidades</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
+                    ${(p.value ?? 0).toFixed(2)}
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Productos agotados */}
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500 uppercase font-medium">
+              Productos agotados ({(outOfStockProducts ?? []).length})
+            </p>
+            {(outOfStockProducts ?? []).length === 0 ? (
+              <p className="text-green-600 text-sm">✅ Ningún producto agotado</p>
+            ) : (
+              <div className="space-y-2 max-h-36 overflow-y-auto">
+                {(outOfStockProducts ?? []).map((p) => (
+                  <div key={p.id} className="flex items-center gap-2 p-2 bg-red-50 rounded-lg border border-red-100">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                    <p className="text-sm text-red-700">{p.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Valor por categoría */}
+        {(inventoryByCategory ?? []).length > 0 && (
+          <div className="mt-5 pt-5 border-t border-gray-100">
+            <p className="text-xs text-gray-500 uppercase font-medium mb-3">Valor por categoría</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {(inventoryByCategory ?? []).map((cat) => (
+                <div key={cat.name} className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 truncate">{cat.name}</p>
+                  <p className="text-base font-bold text-gray-900 mt-1">
+                    ${(cat.value ?? 0).toFixed(2)}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {safeInventoryValue > 0 ? ((cat.value / safeInventoryValue) * 100).toFixed(1) : 0}%
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

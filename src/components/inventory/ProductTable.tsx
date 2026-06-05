@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Search, AlertTriangle, Trash2 } from "lucide-react";
+import { Edit, Search, AlertTriangle, Trash2, ClipboardList } from "lucide-react";
 
 type Product = {
   id: string;
@@ -116,6 +116,11 @@ export function ProductTable({ products }: { products: Product[] }) {
                         <Link href={`/inventory/${product.id}/edit`}>
                           <Button variant="ghost" size="sm">
                             <Edit className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <Link href={`/inventory/${product.id}/kardex?name=${encodeURIComponent(product.name)}`}>
+                          <Button variant="ghost" size="sm" title="Ver Kardex">
+                            <ClipboardList className="w-4 h-4 text-blue-500" />
                           </Button>
                         </Link>
                         <Button

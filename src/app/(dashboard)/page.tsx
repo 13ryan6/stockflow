@@ -1,13 +1,14 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Package, ShoppingCart, Users, Truck, Plus, BarChart3, AlertTriangle, ArrowRight } from "lucide-react";
+import { Package, ShoppingCart, Users, Truck, Plus, BarChart3, AlertTriangle, ArrowRight, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
+  const role = (session?.user as any)?.role;
   const today = new Date();
   const startOfDay = new Date(today.setHours(0, 0, 0, 0));
 
@@ -18,6 +19,7 @@ export default async function DashboardPage() {
     salesToday,
     recentSales,
     lowStockProducts,
+    inventoryProducts,
   ] = await Promise.all([
     db.product.count({ where: { active: true } }),
     db.customer.count({ where: { active: true } }),
@@ -38,9 +40,18 @@ export default async function DashboardPage() {
       orderBy: { stock: "asc" },
       take: 5,
     }),
+    // Solo se usa si es OWNER o ADMIN
+    db.product.findMany({
+      where: { active: true },
+      select: { stock: true, price: true },
+    }),
   ]);
 
   const totalHoy = salesToday.reduce((acc, s) => acc + Number(s.total), 0);
+  const inventoryValue = inventoryProducts.reduce(
+    (acc, p) => acc + p.stock * Number(p.price),
+    0
+  );
 
   const stats = [
     {
@@ -106,6 +117,29 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Card valor del inventario — solo OWNER y ADMIN */}
+      {(role === "OWNER" || role === "ADMIN") && (
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-teal-50 p-3 rounded-xl">
+              <TrendingUp className="w-6 h-6 text-teal-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Valor del inventario</p>
+              <p className="text-3xl font-bold text-gray-900">
+                ${inventoryValue.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/inventory"
+            className="text-xs text-teal-600 hover:text-teal-800 flex items-center gap-1"
+          >
+            Ver inventario <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      )}
 
       {/* Acciones rápidas */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">

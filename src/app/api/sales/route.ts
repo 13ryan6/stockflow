@@ -23,14 +23,12 @@ export async function POST(req: Request) {
 
     const number = await generateSaleNumber();
 
-    // Crear venta y descontar stock en una transacción
     const sale = await db.$transaction(async (tx) => {
       // Verificar stock disponible
       for (const item of items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
         });
-
         if (!product || product.stock < item.quantity) {
           throw new Error(`Stock insuficiente para ${product?.name ?? "producto"}`);
         }
@@ -58,11 +56,31 @@ export async function POST(req: Request) {
         },
       });
 
-      // Descontar stock
+      // Descontar stock y registrar movimiento
       for (const item of items) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: { stock: true },
+        });
+
+        const stockBefore = product!.stock;
+        const stockAfter = stockBefore - item.quantity;
+
         await tx.product.update({
           where: { id: item.productId },
           data: { stock: { decrement: item.quantity } },
+        });
+
+        await tx.stockMovement.create({
+          data: {
+            type: "SALE",
+            quantity: item.quantity,
+            stockBefore,
+            stockAfter,
+            productId: item.productId,
+            userId: sellerId,
+            saleId: newSale.id,
+          },
         });
       }
 

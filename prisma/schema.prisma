@@ -21,15 +21,16 @@ enum SaleStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(SELLER)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  sales     Sale[]
+  id          String          @id @default(cuid())
+  name        String
+  email       String          @unique
+  password    String
+  role        Role            @default(SELLER)
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  sales       Sale[]
+  movements   StockMovement[]
 
   @@map("users")
 }
@@ -58,21 +59,22 @@ model Provider {
 }
 
 model Product {
-  id          String     @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
   description String?
-  price       Decimal    @db.Decimal(10, 2)
-  stock       Int        @default(0)
-  minStock    Int        @default(5)
-  sku         String?    @unique
-  active      Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  category    Category?  @relation(fields: [categoryId], references: [id])
+  price       Decimal         @db.Decimal(10, 2)
+  stock       Int             @default(0)
+  minStock    Int             @default(5)
+  sku         String?         @unique
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  category    Category?       @relation(fields: [categoryId], references: [id])
   categoryId  String?
-  provider    Provider?  @relation(fields: [providerId], references: [id])
+  provider    Provider?       @relation(fields: [providerId], references: [id])
   providerId  String?
   saleItems   SaleItem[]
+  movements   StockMovement[]
 
   @@map("products")
 }
@@ -93,20 +95,21 @@ model Customer {
 }
 
 model Sale {
-  id         String     @id @default(cuid())
-  number     String     @unique
-  status     SaleStatus @default(COMPLETED)
-  subtotal   Decimal    @db.Decimal(10, 2)
-  tax        Decimal    @db.Decimal(10, 2)
-  total      Decimal    @db.Decimal(10, 2)
+  id         String          @id @default(cuid())
+  number     String          @unique
+  status     SaleStatus      @default(COMPLETED)
+  subtotal   Decimal         @db.Decimal(10, 2)
+  tax        Decimal         @db.Decimal(10, 2)
+  total      Decimal         @db.Decimal(10, 2)
   notes      String?
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  customer   Customer?  @relation(fields: [customerId], references: [id])
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  customer   Customer?       @relation(fields: [customerId], references: [id])
   customerId String?
-  seller     User       @relation(fields: [sellerId], references: [id])
+  seller     User            @relation(fields: [sellerId], references: [id])
   sellerId   String
   items      SaleItem[]
+  movements  StockMovement[]
 
   @@map("sales")
 }
@@ -135,4 +138,22 @@ model BusinessConfig {
   updatedAt DateTime @updatedAt
 
   @@map("business_config")
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  type        String
+  quantity    Int
+  stockBefore Int
+  stockAfter  Int
+  notes       String?
+  createdAt   DateTime @default(now())
+  product     Product  @relation(fields: [productId], references: [id])
+  productId   String
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  sale        Sale?    @relation(fields: [saleId], references: [id])
+  saleId      String?
+
+  @@map("stock_movements")
 }

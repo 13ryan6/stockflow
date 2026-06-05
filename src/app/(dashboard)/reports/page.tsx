@@ -19,41 +19,28 @@ export default async function ReportsPage() {
     allSales,
     topProducts,
     topCustomers,
-    lowStock,
+    lowStockProducts,
+    inventoryProducts,
   ] = await Promise.all([
-    // Ventas de hoy
     db.sale.findMany({
-      where: {
-        createdAt: { gte: startOfDay(now), lte: endOfDay(now) },
-      },
+      where: { createdAt: { gte: startOfDay(now), lte: endOfDay(now) } },
       include: { items: true },
     }),
-    // Ventas de la semana
     db.sale.findMany({
-      where: {
-        createdAt: { gte: startOfWeek(now), lte: endOfWeek(now) },
-      },
+      where: { createdAt: { gte: startOfWeek(now), lte: endOfWeek(now) } },
       include: { items: true },
     }),
-    // Ventas del mes
     db.sale.findMany({
-      where: {
-        createdAt: { gte: startOfMonth(now), lte: endOfMonth(now) },
-      },
+      where: { createdAt: { gte: startOfMonth(now), lte: endOfMonth(now) } },
       include: { items: true },
     }),
-    // Todas las ventas
-    db.sale.findMany({
-      include: { items: true },
-    }),
-    // Productos más vendidos
+    db.sale.findMany({ include: { items: true } }),
     db.saleItem.groupBy({
       by: ["productId"],
       _sum: { quantity: true },
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,
     }),
-    // Clientes que más compran
     db.sale.groupBy({
       by: ["customerId"],
       _count: { id: true },
@@ -62,44 +49,67 @@ export default async function ReportsPage() {
       take: 5,
       where: { customerId: { not: null } },
     }),
-    // Productos con stock bajo
     db.product.findMany({
-      where: {
-        active: true,
-        stock: { lte: db.product.fields.minStock },
+      where: { active: true, stock: { lte: 5 } },
+      orderBy: { stock: "asc" },
+      take: 10,
+    }),
+    // Inventario con categoría para agrupar por categoría
+    db.product.findMany({
+      where: { active: true },
+      select: {
+        id: true,
+        name: true,
+        stock: true,
+        price: true,
+        category: { select: { name: true } },
       },
-      take: 5,
       orderBy: { stock: "asc" },
     }),
   ]);
 
-  // Obtener nombres de productos más vendidos
   const topProductIds = topProducts.map((p) => p.productId);
   const topProductsData = await db.product.findMany({
     where: { id: { in: topProductIds } },
   });
 
-  // Obtener nombres de clientes
   const topCustomerIds = topCustomers.map((c) => c.customerId).filter(Boolean) as string[];
   const topCustomersData = await db.customer.findMany({
     where: { id: { in: topCustomerIds } },
-  });
-
-  // Productos stock bajo
-  const lowStockProducts = await db.product.findMany({
-    where: { active: true, stock: { lte: 5 } },
-    orderBy: { stock: "asc" },
-    take: 10,
   });
 
   const totalToday = salesToday.reduce((acc, s) => acc + Number(s.total), 0);
   const totalWeek = salesWeek.reduce((acc, s) => acc + Number(s.total), 0);
   const totalMonth = salesMonth.reduce((acc, s) => acc + Number(s.total), 0);
   const totalAll = allSales.reduce((acc, s) => acc + Number(s.total), 0);
-
   const ivaMonth = salesMonth.reduce((acc, s) => acc + Number(s.tax), 0);
   const subtotalMonth = salesMonth.reduce((acc, s) => acc + Number(s.subtotal), 0);
   const impuestoRenta = totalAll * 0.02;
+
+  // Calcular valor total del inventario
+  const inventoryValue = inventoryProducts.reduce(
+    (acc, p) => acc + p.stock * Number(p.price),
+    0
+  );
+
+  // Agrupar por categoría
+  const categoryMap: Record<string, number> = {};
+  for (const p of inventoryProducts) {
+    const cat = p.category?.name ?? "Sin categoría";
+    categoryMap[cat] = (categoryMap[cat] ?? 0) + p.stock * Number(p.price);
+  }
+  const inventoryByCategory = Object.entries(categoryMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  // Top 3 productos con mayor valor inmovilizado
+  const topValueProducts = [...inventoryProducts]
+    .map((p) => ({ name: p.name, value: p.stock * Number(p.price), stock: p.stock }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 3);
+
+  // Productos agotados
+  const outOfStockProducts = inventoryProducts.filter((p) => p.stock === 0);
 
   return (
     <ReportsDashboard
@@ -127,6 +137,10 @@ export default async function ReportsPage() {
         count: c._count.id,
       }))}
       lowStockProducts={lowStockProducts}
+      inventoryValue={inventoryValue}
+      inventoryByCategory={inventoryByCategory}
+      topValueProducts={topValueProducts}
+      outOfStockProducts={outOfStockProducts.map((p) => ({ id: p.id, name: p.name }))}
     />
   );
 }
