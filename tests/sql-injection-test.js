@@ -10,7 +10,7 @@ const BASE_URL = "https://stockflow-7zus.vercel.app";
 
 function getCSRFAndLogin(email, password) {
   const csrfRes = http.get(`${BASE_URL}/api/auth/csrf`);
-  const csrfToken = csrfRes.json("csrfToken");
+  const csrfToken = csrfRes.json("csrfToken");  
   const loginRes = http.post(
     `${BASE_URL}/api/auth/callback/credentials`,
     { email, password, csrfToken, json: "true" },
