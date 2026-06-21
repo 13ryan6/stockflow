@@ -17,6 +17,28 @@ type Provider = {
   products: { id: string; name: string }[];
 };
 
+const AVATAR_COLORS = [
+  "bg-blue-500",
+  "bg-purple-500",
+  "bg-orange-500",
+  "bg-green-500",
+  "bg-pink-500",
+  "bg-indigo-500",
+];
+
+function getInitials(name: string) {
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function getAvatarColor(name: string) {
+  const index = name
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return AVATAR_COLORS[index % AVATAR_COLORS.length];
+}
+
 export function ProviderTable({ providers }: { providers: Provider[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -40,7 +62,7 @@ export function ProviderTable({ providers }: { providers: Provider[] }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             placeholder="Buscar proveedor..."
-            className="pl-9"
+            className="pl-9 rounded-full bg-gray-50 border-gray-200 focus-visible:ring-blue-500"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -68,8 +90,21 @@ export function ProviderTable({ providers }: { providers: Provider[] }) {
               filtered.map((provider) => (
                 <tr key={provider.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{provider.name}</p>
-                    {provider.address && <p className="text-xs text-gray-400">{provider.address}</p>}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-9 h-9 rounded-full ${getAvatarColor(
+                          provider.name
+                        )} flex items-center justify-center text-white text-xs font-semibold shrink-0`}
+                      >
+                        {getInitials(provider.name)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{provider.name}</p>
+                        {provider.address && (
+                          <p className="text-xs text-gray-400">{provider.address}</p>
+                        )}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-sm text-gray-600">{provider.email ?? "-"}</p>
