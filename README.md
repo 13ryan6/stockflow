@@ -34,3 +34,20 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Módulo SRI
+
+Este proyecto incluye un módulo servidor para facturación electrónica del SRI de Ecuador. El flujo se controla por variables de entorno y puede desactivarse con `SRI_MODULE_ENABLED=false`.
+
+Variables requeridas o recomendadas:
+
+- `ENVIRONMENT=DEV` o `ENVIRONMENT=PROD`
+- `SRI_MODULE_ENABLED=true|false`
+- `SRI_DEV_RECEPCION`
+- `SRI_DEV_AUTORIZACION`
+- `SRI_PROD_RECEPCION`
+- `SRI_PROD_AUTORIZACION`
+- `SRI_CERTIFICATE_P12_PATH`
+- `SRI_CERTIFICATE_PASSWORD`
+
+La implementación vive en `src/modules/sri` y la route opcional para consumirla desde la app está en `src/app/api/sri/invoices/route.ts`.
