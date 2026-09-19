@@ -1,11 +1,7 @@
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { NewSaleForm } from "@/components/sales/NewSaleForm";
 
 export default async function NewSalePage() {
-  const session = await getServerSession(authOptions);
-
   const [products, customers] = await Promise.all([
     db.product.findMany({
       where: { active: true, stock: { gt: 0 } },
@@ -27,11 +23,7 @@ export default async function NewSalePage() {
         </p>
       </div>
 
-      <NewSaleForm
-        products={products}
-        customers={customers}
-        sellerId={(session?.user as any)?.id}
-      />
+      <NewSaleForm products={products} customers={customers} />
     </div>
   );
 }

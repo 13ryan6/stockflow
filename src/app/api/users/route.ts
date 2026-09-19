@@ -1,50 +1,63 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import bcrypt from "bcryptjs";
+
+const createUserSchema = z.object({
+  name: z.string("El nombre es requerido").trim().min(1, "El nombre es requerido").max(100),
+  email: z.email("Email inválido"),
+  // bcrypt solo usa los primeros 72 bytes de la contraseña
+  password: z
+    .string("La contraseña es requerida")
+    .min(8, "La contraseña debe tener mínimo 8 caracteres")
+    .max(72, "La contraseña es demasiado larga"),
+  role: z.enum(["ADMIN", "OWNER", "SELLER"], "Rol inválido").default("SELLER"),
+});
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
+  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  if (!session || (role !== "ADMIN" && role !== "OWNER")) {
+  const actorRole = session.user.role;
+  if (actorRole !== "ADMIN" && actorRole !== "OWNER") {
     return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   }
 
+  let json: unknown;
   try {
-    const body = await req.json();
-    const { name, email, password, role: newRole } = body;
+    json = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+  }
 
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
-    }
+  const parsed = createUserSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Datos inválidos" },
+      { status: 400 }
+    );
+  }
+  const { name, email, password, role } = parsed.data;
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: "La contraseña debe tener mínimo 6 caracteres" }, { status: 400 });
-    }
+  // Owner solo puede crear Sellers
+  if (actorRole === "OWNER" && role !== "SELLER") {
+    return NextResponse.json({ error: "Solo puedes crear vendedores" }, { status: 403 });
+  }
 
-    // Owner solo puede crear Sellers
-    if (role === "OWNER" && newRole !== "SELLER") {
-      return NextResponse.json({ error: "Solo puedes crear vendedores" }, { status: 403 });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 12);
-
+  try {
     const user = await db.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: newRole,
-      },
+      data: { name, email, password: await bcrypt.hash(password, 12), role },
+      select: { id: true, name: true, email: true, role: true },
     });
 
-    return NextResponse.json({ success: true, data: { id: user.id, name: user.name, email: user.email } }, { status: 201 });
-  } catch (error: any) {
-    if (error.code === "P2002") {
+    return NextResponse.json({ success: true, data: user }, { status: 201 });
+  } catch (error: unknown) {
+    if ((error as { code?: string })?.code === "P2002") {
       return NextResponse.json({ error: "El email ya existe" }, { status: 400 });
     }
+    console.error("POST /api/users", error);
     return NextResponse.json({ error: "Error al crear usuario" }, { status: 500 });
   }
 }
