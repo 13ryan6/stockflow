@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2, UserPlus, X } from "lucide-react";
+import { IVA_RATE } from "@/lib/tax";
 
 type Product = {
   id: string;
@@ -30,12 +31,9 @@ type CartItem = {
   stock: number;
 };
 
-const IVA = 0.15;
-
-export function NewSaleForm({ products, customers: initialCustomers, sellerId }: {
+export function NewSaleForm({ products, customers: initialCustomers }: {
   products: Product[];
   customers: Customer[];
-  sellerId: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -120,7 +118,7 @@ export function NewSaleForm({ products, customers: initialCustomers, sellerId }:
   }
 
   const subtotal = cart.reduce((acc, i) => acc + i.price * i.quantity, 0);
-  const tax = subtotal * IVA;
+  const tax = subtotal * IVA_RATE;
   const total = subtotal + tax;
 
   async function handleSubmit() {
@@ -136,16 +134,12 @@ export function NewSaleForm({ products, customers: initialCustomers, sellerId }:
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         customerId: customerId || null,
-        sellerId,
         notes,
+        // El servidor recalcula precios, IVA y total desde la base de datos
         items: cart.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
-          price: i.price,
         })),
-        subtotal,
-        tax,
-        total,
       }),
     });
 

@@ -80,8 +80,8 @@ export function NewUserForm({ currentRole }: { currentRole: string }) {
           value={form.password}
           onChange={handleChange}
           required
-          placeholder="Mínimo 6 caracteres"
-          minLength={6}
+          placeholder="Mínimo 8 caracteres"
+          minLength={8}
         />
       </div>
 

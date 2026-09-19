@@ -157,3 +157,11 @@ model StockMovement {
 
   @@map("stock_movements")
 }
+
+// Contador atómico para numerar ventas (SF-0001, SF-0002, ...) sin duplicados ni huecos
+model SaleCounter {
+  id   Int @id
+  last Int @default(0)
+
+  @@map("sale_counter")
+}
